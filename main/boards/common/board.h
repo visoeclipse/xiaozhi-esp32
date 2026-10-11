@@ -15,28 +15,32 @@
 #include "assets.h"
 
 /**
- * Network events for unified callback
+ * 网络事件类型（统一回调接口）
+ *
+ * 无论是 WiFi 还是 4G 蜂窝网络，都通过这套枚举向 Application 报告状态变化。
  */
 enum class NetworkEvent {
-    Scanning,              // Network is scanning (WiFi scanning, etc.)
-    Connecting,            // Network is connecting (data: SSID/network name)
-    Connected,             // Network connected successfully (data: SSID/network name)
-    Disconnected,          // Network disconnected
-    WifiConfigModeEnter,   // Entered WiFi configuration mode
-    WifiConfigModeExit,    // Exited WiFi configuration mode
-    // Cellular modem specific events
-    ModemDetecting,        // Detecting modem (baud rate, module type)
-    ModemErrorNoSim,       // No SIM card detected
-    ModemErrorRegDenied,   // Network registration denied
-    ModemErrorInitFailed,  // Modem initialization failed
-    ModemErrorTimeout      // Operation timeout
+    Scanning,              ///< 正在扫描网络（WiFi 搜索等）
+    Connecting,            ///< 正在连接（data 为 SSID 或运营商名称）
+    Connected,             ///< 连接成功（data 为 SSID 或运营商名称）
+    Disconnected,          ///< 连接断开
+    WifiConfigModeEnter,   ///< 进入 WiFi 配网模式
+    WifiConfigModeExit,    ///< 退出 WiFi 配网模式
+    // 以下为 4G 蜂窝模组专用事件
+    ModemDetecting,        ///< 正在检测模组（波特率、型号）
+    ModemErrorNoSim,       ///< 未检测到 SIM 卡
+    ModemErrorRegDenied,   ///< 网络注册被拒绝
+    ModemErrorInitFailed,  ///< 模组初始化失败
+    ModemErrorTimeout      ///< 操作超时
 };
 
-// Power save level enumeration
+/**
+ * 功耗级别枚举
+ */
 enum class PowerSaveLevel {
-    LOW_POWER,    // Maximum power saving (lowest power consumption)
-    BALANCED,     // Medium power saving (balanced)
-    PERFORMANCE,  // No power saving (maximum power consumption / full performance)
+    LOW_POWER,    ///< 低功耗：降低 CPU 频率，关闭不必要的外设
+    BALANCED,     ///< 平衡：中等性能和功耗
+    PERFORMANCE,  ///< 高性能：不省电，CPU 全速运行（如升级/通话时）
 };
 
 // Network event callback type (event, data)

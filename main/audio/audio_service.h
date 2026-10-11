@@ -25,26 +25,44 @@
 #include "protocol.h"
 #include "ogg_demuxer.h"
 
-/*
- * There are two types of audio data flow:
- * 1. (MIC) -> [Processors] -> {Encode Queue} -> [Opus Encoder] -> {Send Queue} -> (Server)
- * 2. (Server) -> {Decode Queue} -> [Opus Decoder] -> {Playback Queue} -> (Speaker)
+/**
+ * AudioService - 音频服务核心
  *
- * We use one task for MIC / Speaker / Processors, and one task for Opus Encoder / Opus Decoder.
- * 
- * Decode Queue and Send Queue are the main queues, because Opus packets are quite smaller than PCM packets.
- * 
+ * 管理设备上所有音频处理流水线：
+ *
+ * 数据流方向 1（用户说话，上行）：
+ *   麦克风 → [AFE 处理器：降噪/AEC/VAD] → {编码队列} → [Opus 编码器] → {发送队列} → 服务器
+ *
+ * 数据流方向 2（AI 回复，下行）：
+ *   服务器 → {解码队列} → [Opus 解码器] → {播放队列} → 扬声器
+ *
+ * 使用两个 FreeRTOS 任务：
+ * - 任务 1：处理麦克风采集、扬声器播放、AFE 音频处理
+ * - 任务 2：Opus 编码和解码（CPU 密集型）
+ *
+ * 队列设计说明：
+ * 解码队列和发送队列是主队列，因为 Opus 包比 PCM 包小很多，
+ * 以 Opus 为队列单位可以节省内存并提高效率。
  */
 
+/// Opus 帧时长（毫秒）
 #define OPUS_FRAME_DURATION_MS 60
+/// 编码任务队列最大长度
 #define MAX_ENCODE_TASKS_IN_QUEUE 2
+/// 播放任务队列最大长度
 #define MAX_PLAYBACK_TASKS_IN_QUEUE 2
+/// 解码队列最大包数（约 2.4 秒缓冲）
 #define MAX_DECODE_PACKETS_IN_QUEUE (2400 / OPUS_FRAME_DURATION_MS)
+/// 发送队列最大包数（约 2.4 秒缓冲）
 #define MAX_SEND_PACKETS_IN_QUEUE (2400 / OPUS_FRAME_DURATION_MS)
+/// 音频测试模式最大持续时间
 #define AUDIO_TESTING_MAX_DURATION_MS 10000
+/// 时间戳队列最大长度
 #define MAX_TIMESTAMPS_IN_QUEUE 3
 
+/// 音频功放自动关闭超时
 #define AUDIO_POWER_TIMEOUT_MS 15000
+/// 音频功放状态检查间隔
 #define AUDIO_POWER_CHECK_INTERVAL_MS 1000
 
 #define AS_EVENT_AUDIO_TESTING_RUNNING      (1 << 0)
